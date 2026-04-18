@@ -1,0 +1,29 @@
+# AI Pipeline
+ai_pipeline/processed_tracks.log
+
+# Firebase secrets
+**/serviceAccount*.json
+**/google-services.json
+**/GoogleService-Info.plist
+firebase_options.dart
+
+# Flutter
+flutter_app/.dart_tool/
+flutter_app/.packages
+flutter_app/build/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.env

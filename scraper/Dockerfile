@@ -1,30 +1,18 @@
-# Use Python slim as base
-FROM python:3.11-slim
+# Use an official Python runtime as a parent image
+FROM python:3.10-slim
 
-# Set working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies (lxml needs some libs)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libxml2-dev \
-    libxslt1-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Copy requirements and install
-COPY requirements.txt .
+# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install gunicorn
 
-# Copy scraper code
-COPY scraper.py .
+# Make port 8080 available to the world outside this container
+EXPOSE 8080
 
-# Explicitly copy service account if provided locally (for dev/test)
-# In production Cloud Run, we prefer using Google Application Default Credentials
-# COPY serviceAccountKey.json .
-
-# Cloud Run expects a service to listen on PORT (usually 8080)
-# Although this is a script, we keep it compatible for potential triggers
-ENV PORT 8080
-
-# Command to run the scraper
-CMD ["python", "scraper.py"]
+# Run main.py when the container launches using gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "main:app"]

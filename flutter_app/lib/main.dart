@@ -26,7 +26,12 @@ class OshoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Osho Discourses',
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.darkTheme.copyWith(
+        colorScheme: AppTheme.darkTheme.colorScheme.copyWith(
+          surface: AppTheme.darkTheme.colorScheme.surface,
+          onSurface: AppTheme.darkTheme.colorScheme.onSurface,
+        ),
+      ),
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );

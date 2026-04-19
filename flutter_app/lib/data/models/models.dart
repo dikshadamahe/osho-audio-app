@@ -18,14 +18,14 @@ class Series {
   });
 
   factory Series.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = _asMap(doc.data());
     return Series(
       id: doc.id,
-      title: data['title'] ?? '',
-      coverImageUrl: data['cover_image_url'],
-      discourseCount: data['discourse_count'] ?? 0,
-      language: data['language'] ?? 'hi',
-      slug: data['slug'] ?? '',
+      title: _asString(data['title']),
+      coverImageUrl: _asNullableString(data['cover_image_url']),
+      discourseCount: _asInt(data['discourse_count']),
+      language: _asString(data['language'], fallback: 'hi'),
+      slug: _asString(data['slug']),
     );
   }
 }
@@ -52,16 +52,57 @@ class Discourse {
   });
 
   factory Discourse.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = _asMap(doc.data());
     return Discourse(
       id: doc.id,
-      trackNumber: data['track_number'] ?? 0,
-      title: data['title'] ?? 'Unknown Track',
-      audioUrl: data['audio_url'] ?? '',
-      durationSeconds: data['duration_seconds'] ?? 0,
-      isBroken: data['is_broken'] ?? false,
-      hasTranscript: data['has_transcript'] ?? false,
-      transcriptUrl: data['transcript_url'],
+      trackNumber: _asInt(data['track_number']),
+      title: _asString(data['title'], fallback: 'Unknown Track'),
+      audioUrl: _asString(data['audio_url']),
+      durationSeconds: _asInt(data['duration_seconds']),
+      isBroken: _asBool(data['is_broken']),
+      hasTranscript: _asBool(data['has_transcript']),
+      transcriptUrl: _asNullableString(data['transcript_url']),
     );
   }
+}
+
+Map<String, dynamic> _asMap(Object? value) {
+  if (value is Map<String, dynamic>) {
+    return value;
+  }
+  if (value is Map) {
+    return value.map((key, entryValue) => MapEntry(key.toString(), entryValue));
+  }
+  return const <String, dynamic>{};
+}
+
+String _asString(Object? value, {String fallback = ''}) {
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+  return fallback;
+}
+
+String? _asNullableString(Object? value) {
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+  return null;
+}
+
+int _asInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  return 0;
+}
+
+bool _asBool(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  return false;
 }

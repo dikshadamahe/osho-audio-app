@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/play_pause_morph_icon.dart';
 import '../../services/audio_playback_service.dart';
 
 class MiniPlayerBar extends ConsumerWidget {
@@ -106,16 +107,10 @@ class MiniPlayerBar extends ConsumerWidget {
                       intensity: 0.8,
                       boxShape: NeumorphicBoxShape.circle(),
                     ),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      child: Icon(
-                        isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        key: ValueKey(isPlaying),
-                        size: 20,
-                        color: AppTheme.amberFire,
-                      ),
+                    child: PlayPauseMorphIcon(
+                      isPlaying: isPlaying,
+                      size: 20,
+                      color: AppTheme.amberFire,
                     ),
                   ),
                   const SizedBox(width: 10),

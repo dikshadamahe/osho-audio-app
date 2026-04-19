@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
+import '../../core/widgets/play_pause_morph_icon.dart';
 import '../../services/audio_playback_service.dart';
 import 'mini_player_bar.dart';
 
@@ -364,14 +365,10 @@ class _PlayerDetails extends ConsumerWidget {
                     : AppTheme.surface.withValues(alpha: 0.92),
                 boxShape: const NeumorphicBoxShape.circle(),
               ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 240),
-                child: Icon(
-                  isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  key: ValueKey(isPlaying),
-                  size: 42,
-                  color: AppTheme.amberFire,
-                ),
+              child: PlayPauseMorphIcon(
+                isPlaying: isPlaying,
+                size: 42,
+                color: AppTheme.amberFire,
               ),
             ),
             _ControlButton(

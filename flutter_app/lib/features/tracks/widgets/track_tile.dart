@@ -135,8 +135,8 @@ class _TrackLeading extends StatelessWidget {
       width: 48,
       height: 48,
       child: isActive
-          ? const Neumorphic(
-              style: NeumorphicStyle(
+          ? Neumorphic(
+              style: const NeumorphicStyle(
                 depth: -2,
                 intensity: 0.8,
                 color: AppTheme.surfaceLight,

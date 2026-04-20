@@ -17,120 +17,117 @@ class HomeScreen extends ConsumerWidget {
         backgroundColor: NeumorphicTheme.baseColor(context),
         body: NeumorphicBackground(
           child: CustomScrollView(
+            cacheExtent: 600,
             physics: const BouncingScrollPhysics(),
             slivers: [
               // ── App Bar ──────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                    child: AnimatedEntrance(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              // Om symbol with glow
-                              Neumorphic(
-                                style: const NeumorphicStyle(
-                                  shape: NeumorphicShape.convex,
-                                  boxShape: NeumorphicBoxShape.circle(),
-                                  depth: 4,
-                                  intensity: 0.8,
-                                ),
-                                child: Container(
-                                  width: 48,
-                                  height: 48,
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    'ॐ',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      color: AppTheme.amberFire,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                  child: AnimatedEntrance(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            // Om symbol with glow
+                            Neumorphic(
+                              style: const NeumorphicStyle(
+                                shape: NeumorphicShape.convex,
+                                boxShape: NeumorphicBoxShape.circle(),
+                                depth: 4,
+                                intensity: 0.8,
+                              ),
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  'ॐ',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    color: AppTheme.amberFire,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 14),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Osho',
-                                    style: Theme.of(context).textTheme.displayMedium,
-                                  ),
-                                  Text(
-                                    'Audio Discourses',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          letterSpacing: 2.5,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-                          Text(
-                            'Explore Series',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Tap a series to browse its discourses',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
+                            ),
+                            const SizedBox(width: 14),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Osho',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.displayMedium,
+                                ),
+                                Text(
+                                  'Audio Discourses',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(letterSpacing: 2.5),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'Explore Series',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap a series to browse its discourses',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              ),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-                // ── Series Grid ──────────────────────────────────
-                seriesAsync.when(
-                  loading: () => SliverToBoxAdapter(
-                    child: _buildLoadingGrid(),
-                  ),
-                  error: (error, stack) => SliverToBoxAdapter(
-                    child: _buildErrorState(context, ref, error),
-                  ),
-                  data: (seriesList) {
-                    if (seriesList.isEmpty) {
-                      return SliverToBoxAdapter(
-                        child: _buildEmptyState(context),
-                      );
-                    }
-                    return SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: 0.72,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return AnimatedEntrance(
-                              delay: Duration(milliseconds: 60 * index),
-                              child: SeriesCard(series: seriesList[index]),
-                            );
-                          },
-                          childCount: seriesList.length,
-                        ),
-                      ),
-                    );
-                  },
+              // ── Series Grid ──────────────────────────────────
+              seriesAsync.when(
+                loading: () => SliverToBoxAdapter(child: _buildLoadingGrid()),
+                error: (error, stack) => SliverToBoxAdapter(
+                  child: _buildErrorState(context, ref, error),
                 ),
+                data: (seriesList) {
+                  if (seriesList.isEmpty) {
+                    return SliverToBoxAdapter(child: _buildEmptyState(context));
+                  }
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.72,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        return RepaintBoundary(
+                          child: AnimatedEntrance(
+                            delay: Duration(milliseconds: 60 * index),
+                            child: SeriesCard(series: seriesList[index]),
+                          ),
+                        );
+                      }, childCount: seriesList.length),
+                    ),
+                  );
+                },
+              ),
 
-                // Bottom padding for mini-player clearance
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
-            ),
+              // Bottom padding for mini-player clearance
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            ],
           ),
         ),
+      ),
     );
   }
 
@@ -149,22 +146,26 @@ class HomeScreen extends ConsumerWidget {
         ),
         itemCount: 6,
         itemBuilder: (context, index) {
-          return AnimatedEntrance(
-            delay: Duration(milliseconds: 80 * index),
-            child: Neumorphic(
-              style: NeumorphicStyle(
-                shape: NeumorphicShape.flat,
-                boxShape: NeumorphicBoxShape.roundRect(BorderRadius.circular(16)),
-                depth: 2,
-                intensity: 0.5,
-              ),
-              child: const Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.amberFire,
+          return RepaintBoundary(
+            child: AnimatedEntrance(
+              delay: Duration(milliseconds: 80 * index),
+              child: Neumorphic(
+                style: NeumorphicStyle(
+                  shape: NeumorphicShape.flat,
+                  boxShape: NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(16),
+                  ),
+                  depth: 2,
+                  intensity: 0.5,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.amberFire,
+                    ),
                   ),
                 ),
               ),
@@ -204,9 +205,7 @@ class HomeScreen extends ConsumerWidget {
               onPressed: () => ref.invalidate(seriesListProvider),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Retry'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.amberFire,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppTheme.amberFire),
             ),
           ],
         ),

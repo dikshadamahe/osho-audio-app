@@ -1,4 +1,4 @@
-import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -19,8 +19,14 @@ class PlayerPanel extends ConsumerStatefulWidget {
 class _PlayerPanelState extends ConsumerState<PlayerPanel> {
   final DraggableScrollableController _panelController =
       DraggableScrollableController();
+  final ValueNotifier<double> _sheetExtent = ValueNotifier<double>(0.12);
 
-  double _sheetExtent = 0.12;
+  @override
+  void dispose() {
+    _sheetExtent.dispose();
+    _panelController.dispose();
+    super.dispose();
+  }
 
   Future<void> _animatePanel(double target) async {
     if (!_panelController.isAttached) return;
@@ -41,20 +47,14 @@ class _PlayerPanelState extends ConsumerState<PlayerPanel> {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final collapsedExtent = (92 / screenHeight).clamp(0.10, 0.15).toDouble();
     const expandedExtent = 0.94;
-    final expansion =
-        ((_sheetExtent - collapsedExtent) / (expandedExtent - collapsedExtent))
-            .clamp(0.0, 1.0)
-            .toDouble();
 
     return NotificationListener<DraggableScrollableNotification>(
       onNotification: (notification) {
         final nextExtent = notification.extent
             .clamp(collapsedExtent, expandedExtent)
             .toDouble();
-        if ((nextExtent - _sheetExtent).abs() > 0.001) {
-          setState(() {
-            _sheetExtent = nextExtent;
-          });
+        if ((nextExtent - _sheetExtent.value).abs() > 0.004) {
+          _sheetExtent.value = nextExtent;
         }
         return false;
       },
@@ -71,84 +71,111 @@ class _PlayerPanelState extends ConsumerState<PlayerPanel> {
 
           return Padding(
             padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: Neumorphic(
-              style: NeumorphicStyle(
-                depth: expansion > 0.5 ? 2 : 6,
-                intensity: 0.65,
-                color: AppTheme.surface.withValues(alpha: 0.82),
-                boxShape: NeumorphicBoxShape.roundRect(borderRadius),
-              ),
-              child: ClipRRect(
-                borderRadius: borderRadius,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: _AmbientArtworkBackground(
-                        artworkUrl: _artworkUrlFor(mediaItem),
-                        expansion: expansion,
-                      ),
-                    ),
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.deepBlack.withValues(alpha: 0.48),
-                              AppTheme.surface.withValues(alpha: 0.72),
-                              AppTheme.deepBlack.withValues(alpha: 0.96),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: const [0.0, 0.28, 1.0],
+            child: RepaintBoundary(
+              child: Neumorphic(
+                style: NeumorphicStyle(
+                  depth: 4,
+                  intensity: 0.65,
+                  color: AppTheme.surface.withValues(alpha: 0.82),
+                  boxShape: NeumorphicBoxShape.roundRect(borderRadius),
+                ),
+                child: ClipRRect(
+                  borderRadius: borderRadius,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: RepaintBoundary(
+                          child: _AmbientArtworkBackground(
+                            artworkUrl: _artworkUrlFor(mediaItem),
+                            extentListenable: _sheetExtent,
+                            collapsedExtent: collapsedExtent,
+                            expandedExtent: expandedExtent,
                           ),
                         ),
                       ),
-                    ),
-                    CustomScrollView(
-                      controller: scrollController,
-                      physics: const BouncingScrollPhysics(),
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: _PanelGrip(expansion: expansion),
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                            child: MiniPlayerBar(
-                              isExpanded: expansion > 0.55,
-                              expansion: expansion,
-                              onToggle: () => _animatePanel(
-                                expansion > 0.5
-                                    ? collapsedExtent
-                                    : expandedExtent,
+                      const Positioned.fill(child: _PlayerPanelOverlay()),
+                      CustomScrollView(
+                        controller: scrollController,
+                        physics: const BouncingScrollPhysics(),
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: ValueListenableBuilder<double>(
+                                valueListenable: _sheetExtent,
+                                builder: (context, extent, child) {
+                                  return _PanelGrip(
+                                    expansion: _normalizeExpansion(
+                                      extent,
+                                      collapsedExtent,
+                                      expandedExtent,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ),
-                        ),
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-                            child: IgnorePointer(
-                              ignoring: expansion < 0.08,
-                              child: AnimatedOpacity(
-                                duration: const Duration(milliseconds: 220),
-                                opacity: Curves.easeOut.transform(expansion),
-                                child: _PlayerDetails(
-                                  expansion: expansion,
-                                  onCollapse: () =>
-                                      _animatePanel(collapsedExtent),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                              child: RepaintBoundary(
+                                child: ValueListenableBuilder<double>(
+                                  valueListenable: _sheetExtent,
+                                  builder: (context, extent, child) {
+                                    final expansion = _normalizeExpansion(
+                                      extent,
+                                      collapsedExtent,
+                                      expandedExtent,
+                                    );
+                                    return MiniPlayerBar(
+                                      isExpanded: expansion > 0.55,
+                                      expansion: expansion,
+                                      onToggle: () => _animatePanel(
+                                        expansion > 0.5
+                                            ? collapsedExtent
+                                            : expandedExtent,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
+                              child: RepaintBoundary(
+                                child: ValueListenableBuilder<double>(
+                                  valueListenable: _sheetExtent,
+                                  builder: (context, extent, child) {
+                                    final expansion = _normalizeExpansion(
+                                      extent,
+                                      collapsedExtent,
+                                      expandedExtent,
+                                    );
+                                    return IgnorePointer(
+                                      ignoring: expansion < 0.08,
+                                      child: Opacity(
+                                        opacity: Curves.easeOut.transform(
+                                          expansion,
+                                        ),
+                                        child: _PlayerDetails(
+                                          expansion: expansion,
+                                          onCollapse: () =>
+                                              _animatePanel(collapsedExtent),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -177,22 +204,14 @@ class PlayerScreen extends StatelessWidget {
                   artworkUrl: mediaItem == null
                       ? null
                       : _artworkUrlFor(mediaItem),
-                  expansion: 1,
+                  staticExpansion: 1,
                 ),
               ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.deepBlack.withValues(alpha: 0.5),
-                        AppTheme.surface.withValues(alpha: 0.7),
-                        AppTheme.deepBlack,
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
+              const Positioned.fill(
+                child: _PlayerPanelOverlay(
+                  topOpacity: 0.5,
+                  midOpacity: 0.7,
+                  bottomOpacity: 1,
                 ),
               ),
               SafeArea(
@@ -458,59 +477,65 @@ class _ArtworkCard extends StatelessWidget {
               ],
             ),
           ),
-          Neumorphic(
-            style: const NeumorphicStyle(
-              depth: 6,
-              intensity: 0.72,
-              boxShape: NeumorphicBoxShape.roundRect(
-                BorderRadius.all(Radius.circular(34)),
+          RepaintBoundary(
+            child: Neumorphic(
+              style: NeumorphicStyle(
+                depth: 6,
+                intensity: 0.72,
+                boxShape: NeumorphicBoxShape.roundRect(
+                  const BorderRadius.all(Radius.circular(34)),
+                ),
               ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(34),
-              child: SizedBox(
-                width: 248,
-                height: 248,
-                child: artworkUrl == null || artworkUrl.isEmpty
-                    ? Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppTheme.surfaceLight, AppTheme.deepBlack],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(34),
+                child: SizedBox(
+                  width: 248,
+                  height: 248,
+                  child: artworkUrl == null || artworkUrl.isEmpty
+                      ? Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppTheme.surfaceLight,
+                                AppTheme.deepBlack,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                           ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'ॐ',
-                          style: Theme.of(context).textTheme.displayLarge
-                              ?.copyWith(color: AppTheme.amberFireLight),
-                        ),
-                      )
-                    : Image.network(
-                        artworkUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.surfaceLight,
-                                  AppTheme.deepBlack,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                          alignment: Alignment.center,
+                          child: Text(
+                            'ॐ',
+                            style: Theme.of(context).textTheme.displayLarge
+                                ?.copyWith(color: AppTheme.amberFireLight),
+                          ),
+                        )
+                      : Image.network(
+                          artworkUrl,
+                          fit: BoxFit.cover,
+                          filterQuality: FilterQuality.low,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppTheme.surfaceLight,
+                                    AppTheme.deepBlack,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                               ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'ॐ',
-                              style: Theme.of(context).textTheme.displayLarge
-                                  ?.copyWith(color: AppTheme.amberFireLight),
-                            ),
-                          );
-                        },
-                      ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'ॐ',
+                                style: Theme.of(context).textTheme.displayLarge
+                                    ?.copyWith(color: AppTheme.amberFireLight),
+                              ),
+                            );
+                          },
+                        ),
+                ),
               ),
             ),
           ),
@@ -619,11 +644,17 @@ class _ControlButton extends StatelessWidget {
 class _AmbientArtworkBackground extends StatefulWidget {
   const _AmbientArtworkBackground({
     required this.artworkUrl,
-    required this.expansion,
+    this.extentListenable,
+    this.collapsedExtent,
+    this.expandedExtent,
+    this.staticExpansion,
   });
 
   final String? artworkUrl;
-  final double expansion;
+  final ValueListenable<double>? extentListenable;
+  final double? collapsedExtent;
+  final double? expandedExtent;
+  final double? staticExpansion;
 
   @override
   State<_AmbientArtworkBackground> createState() =>
@@ -652,98 +683,206 @@ class _AmbientArtworkBackgroundState extends State<_AmbientArtworkBackground> {
 
   @override
   Widget build(BuildContext context) {
-    final blurSigma = lerpDouble(18, 28, widget.expansion);
-    final overlayStrength = lerpDouble(0.22, 0.12, widget.expansion);
-
     if (_currentArtwork == null || _currentArtwork!.isEmpty) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.deepBlack,
-              AppTheme.surface,
-              AppTheme.deepBlack.withValues(alpha: 0.94),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+      return const _AmbientFallback();
+    }
+
+    final extentListenable = widget.extentListenable;
+    if (extentListenable == null) {
+      return _BlurredArtworkStack(
+        artworkUrl: _currentArtwork!,
+        previousArtworkUrl: _previousArtwork == _currentArtwork
+            ? null
+            : _previousArtwork,
+        expansion: widget.staticExpansion ?? 1,
       );
     }
 
-    final currentLayer = _BackgroundLayer(
-      key: ValueKey(_currentArtwork),
-      artworkUrl: _currentArtwork!,
-      blurSigma: blurSigma,
-      overlayStrength: overlayStrength,
-    );
-
-    if (_previousArtwork == null || _previousArtwork == _currentArtwork) {
-      return currentLayer;
-    }
-
-    return AnimatedCrossFade(
-      duration: const Duration(milliseconds: 600),
-      crossFadeState: CrossFadeState.showSecond,
-      firstChild: _BackgroundLayer(
-        key: ValueKey(_previousArtwork),
-        artworkUrl: _previousArtwork!,
-        blurSigma: blurSigma,
-        overlayStrength: overlayStrength,
-      ),
-      secondChild: currentLayer,
+    return ValueListenableBuilder<double>(
+      valueListenable: extentListenable,
+      builder: (context, extent, child) {
+        final expansion = _normalizeExpansion(
+          extent,
+          widget.collapsedExtent ?? 0.12,
+          widget.expandedExtent ?? 0.94,
+        );
+        return _BlurredArtworkStack(
+          artworkUrl: _currentArtwork!,
+          previousArtworkUrl: _previousArtwork == _currentArtwork
+              ? null
+              : _previousArtwork,
+          expansion: expansion,
+        );
+      },
     );
   }
 }
 
-class _BackgroundLayer extends StatelessWidget {
-  const _BackgroundLayer({
-    super.key,
+class _BlurredArtworkStack extends StatelessWidget {
+  const _BlurredArtworkStack({
     required this.artworkUrl,
-    required this.blurSigma,
-    required this.overlayStrength,
+    required this.expansion,
+    this.previousArtworkUrl,
   });
 
   final String artworkUrl;
-  final double blurSigma;
-  final double overlayStrength;
+  final String? previousArtworkUrl;
+  final double expansion;
+
+  @override
+  Widget build(BuildContext context) {
+    final strongBlurOpacity = Curves.easeOut.transform(expansion);
+    final subtleOverlayOpacity = lerpDouble(0.22, 0.12, expansion);
+
+    final currentArtwork = _StaticBlurArtwork(
+      artworkUrl: artworkUrl,
+      subtleOverlayOpacity: subtleOverlayOpacity,
+      strongBlurOpacity: strongBlurOpacity,
+    );
+
+    if (previousArtworkUrl == null || previousArtworkUrl == artworkUrl) {
+      return currentArtwork;
+    }
+
+    return AnimatedCrossFade(
+      duration: const Duration(milliseconds: 600),
+      firstChild: _StaticBlurArtwork(
+        artworkUrl: previousArtworkUrl!,
+        subtleOverlayOpacity: subtleOverlayOpacity,
+        strongBlurOpacity: strongBlurOpacity,
+      ),
+      secondChild: currentArtwork,
+      crossFadeState: CrossFadeState.showSecond,
+    );
+  }
+}
+
+class _StaticBlurArtwork extends StatelessWidget {
+  const _StaticBlurArtwork({
+    required this.artworkUrl,
+    required this.subtleOverlayOpacity,
+    required this.strongBlurOpacity,
+  });
+
+  final String artworkUrl;
+  final double subtleOverlayOpacity;
+  final double strongBlurOpacity;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.network(
-          artworkUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(color: AppTheme.deepBlack);
-          },
-        ),
-        BackdropFilter(
-          filter: ui.ImageFilter.blur(
-            sigmaX: blurSigma,
-            sigmaY: blurSigma,
-            tileMode: TileMode.mirror,
-          ),
-          child: ColoredBox(
-            color: AppTheme.deepBlack.withValues(alpha: overlayStrength),
+        RepaintBoundary(
+          child: _ImageFilteredLayer(
+            artworkUrl: artworkUrl,
+            sigma: 18,
+            overlayOpacity: subtleOverlayOpacity,
           ),
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.deepBlack.withValues(alpha: 0.2),
-                AppTheme.surface.withValues(alpha: 0.3),
-                AppTheme.deepBlack.withValues(alpha: 0.78),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        IgnorePointer(
+          child: Opacity(
+            opacity: strongBlurOpacity,
+            child: RepaintBoundary(
+              child: _ImageFilteredLayer(
+                artworkUrl: artworkUrl,
+                sigma: 28,
+                overlayOpacity: 0.18,
+              ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ImageFilteredLayer extends StatelessWidget {
+  const _ImageFilteredLayer({
+    required this.artworkUrl,
+    required this.sigma,
+    required this.overlayOpacity,
+  });
+
+  final String artworkUrl;
+  final double sigma;
+  final double overlayOpacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(
+        sigmaX: sigma,
+        sigmaY: sigma,
+        tileMode: TileMode.mirror,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            artworkUrl,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.low,
+            errorBuilder: (context, error, stackTrace) {
+              return const ColoredBox(color: AppTheme.deepBlack);
+            },
+          ),
+          ColoredBox(
+            color: AppTheme.deepBlack.withValues(alpha: overlayOpacity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmbientFallback extends StatelessWidget {
+  const _AmbientFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.deepBlack,
+            AppTheme.surface,
+            AppTheme.deepBlack.withValues(alpha: 0.94),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+    );
+  }
+}
+
+class _PlayerPanelOverlay extends StatelessWidget {
+  const _PlayerPanelOverlay({
+    this.topOpacity = 0.48,
+    this.midOpacity = 0.72,
+    this.bottomOpacity = 0.96,
+  });
+
+  final double topOpacity;
+  final double midOpacity;
+  final double bottomOpacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.deepBlack.withValues(alpha: topOpacity),
+            AppTheme.surface.withValues(alpha: midOpacity),
+            AppTheme.deepBlack.withValues(alpha: bottomOpacity),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: const [0.0, 0.28, 1.0],
+        ),
+      ),
     );
   }
 }
@@ -796,4 +935,14 @@ String _formatDuration(Duration duration) {
 
 double lerpDouble(double begin, double end, double t) {
   return begin + (end - begin) * t;
+}
+
+double _normalizeExpansion(
+  double extent,
+  double collapsedExtent,
+  double expandedExtent,
+) {
+  return ((extent - collapsedExtent) / (expandedExtent - collapsedExtent))
+      .clamp(0.0, 1.0)
+      .toDouble();
 }
